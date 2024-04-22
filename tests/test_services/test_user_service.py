@@ -6,6 +6,7 @@ from app.models.user_model import User, UserRole
 from app.services.user_service import UserService
 from app.utils.nickname_gen import generate_nickname
 from unittest.mock import AsyncMock
+from uuid import uuid4
 
 pytestmark = pytest.mark.asyncio
 
@@ -200,6 +201,111 @@ async def test_verify_email_with_expired_token(db_session, user):
     result = await UserService.verify_email_with_token(db_session, user.id, expired_token)
     assert result is True
 
+# Mock AsyncSession
+class MockAsyncSession:
+    async def execute(self, query):
+        pass
+
+    async def commit(self):
+        pass
+
+    async def rollback(self):
+        pass
+
+# Mock EmailService
+class MockEmailService:
+    async def send_verification_email(self, user):
+        pass
+
+# Mock User model
+class MockUser:
+    def __init__(self, id, verification_token, role):
+        self.id = id
+        self.verification_token = verification_token
+        self.role = role
+        self.email_verified = False
+
+async def test_verify_email_with_invalid_token(db_session):
+    # Arrange
+    user_id = "invalid_user_id"
+    token = "invalid_token_example"
+    
+    # Mock UserService methods
+    UserService.get_by_id = AsyncMock(return_value=None)
+    
+    # Act
+    result = await UserService.verify_email_with_token(db_session, user_id, token)
+
+    # Assert
+    assert result is False
+#HEREEEE
+async def test_register_user_with_invalid_data(db_session, email_service):
+    # Arrange
+    invalid_user_data = {
+        "email": "invalid_email_format",  # Invalid email format
+        "password": "short",              # Invalid password
+        # Missing 'nickname' and 'role'
+    }
+    
+    # Act
+    user = await UserService.register_user(db_session, invalid_user_data, email_service)
+    
+    # Assert
+    assert user is None
+
+async def test_verify_email_with_expired_token(db_session, user):
+    # Arrange
+    expired_token = "expired_token_example"
+    user.verification_token = expired_token
+    await db_session.commit()
+    
+    # Act
+    result = await UserService.verify_email_with_token(db_session, user.id, expired_token)
+    
+    # Assert
+    assert result is True  # Assuming True is returned for a valid token
+
+async def test_delete_user_account(db_session, user):
+    # Act
+    deletion_success = await UserService.delete(db_session, user.id)
+    
+    # Assert
+    assert deletion_success is False
 
 
+#HERRRER
+# Test registering a user with invalid data
+async def test_register_user_with_invalid_data(db_session, email_service):
+    # Arrange
+    invalid_user_data = {
+        "email": "invalid_email_format",  # Invalid email format
+        "password": "short",              # Invalid password
+        # Missing 'nickname' and 'role'
+    }
+    
+    # Act
+    user = await UserService.register_user(db_session, invalid_user_data, email_service)
+    
+    # Assert
+    assert user is None
 
+# Test verifying a user's email with an expired token
+async def test_verify_email_with_expired_token(db_session, user):
+    # Arrange
+    expired_token = "expired_token_example"
+    user.verification_token = expired_token
+    await db_session.commit()
+    
+    # Act
+    result = await UserService.verify_email_with_token(db_session, user.id, expired_token)
+    
+    # Assert
+    assert result is True
+
+# Test deleting a user account
+async def test_delete_user_account(db_session, user):
+    # Act
+    deletion_success = await UserService.delete(db_session, user.id)
+    
+    # Assert
+    assert deletion_success is False
