@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 import secrets
 from typing import Optional, Dict, List
 from pydantic import ValidationError
-from sqlalchemy import func, null, update, select
+from sqlalchemy import func, null, update, select, or_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies import get_email_service, get_settings
@@ -199,3 +199,21 @@ class UserService:
             await session.commit()
             return True
         return False
+
+
+#FEATURES:
+    @classmethod
+    async def search_users(cls, session: AsyncSession, username: Optional[str] = None, email: Optional[str] = None, role: Optional[str] = None, skip: int = 0, limit: int = 10) -> List[User]:
+        query = select(User)
+        
+        if username:
+            query = query.filter(func.lower(User.nickname) == func.lower(username))
+        if email:
+            query = query.filter(func.lower(User.email) == func.lower(email))
+        if role:
+            query = query.filter(User.role == role)
+        
+        query = query.offset(skip).limit(limit)
+        
+        result = await cls._execute_query(session, query)
+        return result.scalars().all() if result else []
