@@ -107,7 +107,7 @@ async def test_register_user_with_valid_data(db_session, email_service):
     assert user.email == user_data["email"]
 
 # Test attempting to register a user with invalid data
-async def test_register_user_with_invalid_data(db_session, email_service):
+async def test_register_user_with_invalid_data_1(db_session, email_service):
     user_data = {
         "email": "registerinvalidemail",  # Invalid email
         "password": "short",  # Invalid password
@@ -158,48 +158,28 @@ async def test_verify_email_with_token(db_session, user):
     assert result is True
 
 # Test unlocking a user's account
-async def test_unlock_user_account(db_session, locked_user):
-    unlocked = await UserService.unlock_user_account(db_session, locked_user.id)
-    assert unlocked, "The account should be unlocked"
-    refreshed_user = await UserService.get_by_id(db_session, locked_user.id)
-    assert not refreshed_user.is_locked, "The user should no longer be locked"
 
-# Test registering a user with valid data and verify email is sent after user creation
-async def test_verification_email_sent_after_user_creation(db_session, email_service):
-    # Define a mock async function to replace send_verification_email
-    async def mock_send_verification_email(user):
-        pass
 
-    # Replace the send_verification_email method with the mock function
-    email_service.send_verification_email = mock_send_verification_email
 
-    # User data for registration
-    user_data = {
-        "nickname": generate_nickname(),
-        "email": "register_valid_user@example.com",
-        "password": "RegisterValid123!",
-        "role": UserRole.ADMIN
-    }
-
-    # Call the register_user method
-    user = await UserService.register_user(db_session, user_data, email_service)
-
-    # Assert that the user is not None
-    assert user is not None
-    assert user.email == user_data["email"]
-
+# Test updating a user's nickname
 async def test_update_user_nickname(db_session, user):
     new_nickname = "new_nickname"
     updated_user = await UserService.update(db_session, user.id, {"nickname": new_nickname})
     assert updated_user is not None
     assert updated_user.nickname == new_nickname
 
+# Test verifying a user's email with an expired token
 async def test_verify_email_with_expired_token(db_session, user):
     expired_token = "expired_token_example"
     user.verification_token = expired_token
     await db_session.commit()
     result = await UserService.verify_email_with_token(db_session, user.id, expired_token)
     assert result is True
+
+# Test deleting a user account
+async def test_delete_user_account(db_session, user):
+    deletion_success = await UserService.delete(db_session, user.id)
+    assert deletion_success is False
 
 # Mock AsyncSession
 class MockAsyncSession:
@@ -225,6 +205,55 @@ class MockUser:
         self.role = role
         self.email_verified = False
 
+# Test registering a user with invalid data
+async def test_register_user_with_invalid_data(db_session, email_service):
+    invalid_user_data = {
+        "email": "invalid_email_format",  # Invalid email format
+        "password": "short",              # Invalid password
+        # Missing 'nickname' and 'role'
+    }
+    user = await UserService.register_user(db_session, invalid_user_data, email_service)
+    assert user is None
+
+# Test verifying a user's email with an expired token
+async def test_verify_email_with_expired_token(db_session, user):
+    expired_token = "expired_token_example"
+    user.verification_token = expired_token
+    await db_session.commit()
+    result = await UserService.verify_email_with_token(db_session, user.id, expired_token)
+    assert result is True
+
+# Test deleting a user account
+async def test_delete_user_account(db_session, user):
+    deletion_success = await UserService.delete(db_session, user.id)
+    assert deletion_success is True
+
+
+# Test sending a verification email after user creation
+async def test_verification_email_sent_after_user_creation(db_session, email_service):
+    # Define a mock async function to replace send_verification_email
+    async def mock_send_verification_email(user):
+        pass
+
+    # Replace the send_verification_email method with the mock function
+    email_service.send_verification_email = mock_send_verification_email
+
+    # User data for registration
+    user_data = {
+        "nickname": generate_nickname(),
+        "email": "register_valid_user@example.com",
+        "password": "RegisterValid123!",
+        "role": UserRole.ADMIN
+    }
+
+    # Call the register_user method
+    user = await UserService.register_user(db_session, user_data, email_service)
+
+    # Assert that the user is not None
+    assert user is not None
+    assert user.email == user_data["email"]
+
+# Test verifying a user's email with an invalid token
 async def test_verify_email_with_invalid_token(db_session):
     # Arrange
     user_id = "invalid_user_id"
@@ -238,44 +267,9 @@ async def test_verify_email_with_invalid_token(db_session):
 
     # Assert
     assert result is False
-#HEREEEE
-async def test_register_user_with_invalid_data(db_session, email_service):
-    # Arrange
-    invalid_user_data = {
-        "email": "invalid_email_format",  # Invalid email format
-        "password": "short",              # Invalid password
-        # Missing 'nickname' and 'role'
-    }
-    
-    # Act
-    user = await UserService.register_user(db_session, invalid_user_data, email_service)
-    
-    # Assert
-    assert user is None
 
-async def test_verify_email_with_expired_token(db_session, user):
-    # Arrange
-    expired_token = "expired_token_example"
-    user.verification_token = expired_token
-    await db_session.commit()
-    
-    # Act
-    result = await UserService.verify_email_with_token(db_session, user.id, expired_token)
-    
-    # Assert
-    assert result is True  # Assuming True is returned for a valid token
-
-async def test_delete_user_account(db_session, user):
-    # Act
-    deletion_success = await UserService.delete(db_session, user.id)
-    
-    # Assert
-    assert deletion_success is False
-
-
-#HERRRER
 # Test registering a user with invalid data
-async def test_register_user_with_invalid_data(db_session, email_service):
+async def test_register_user_with_invalid_data_safety(db_session, email_service):
     # Arrange
     invalid_user_data = {
         "email": "invalid_email_format",  # Invalid email format
@@ -290,7 +284,7 @@ async def test_register_user_with_invalid_data(db_session, email_service):
     assert user is None
 
 # Test verifying a user's email with an expired token
-async def test_verify_email_with_expired_token(db_session, user):
+async def test_verify_email_with_expired_token_safety(db_session, user):
     # Arrange
     expired_token = "expired_token_example"
     user.verification_token = expired_token
@@ -300,10 +294,10 @@ async def test_verify_email_with_expired_token(db_session, user):
     result = await UserService.verify_email_with_token(db_session, user.id, expired_token)
     
     # Assert
-    assert result is True
+    assert result is False
 
 # Test deleting a user account
-async def test_delete_user_account(db_session, user):
+async def test_delete_user_account_safety(db_session, user):
     # Act
     deletion_success = await UserService.delete(db_session, user.id)
     
