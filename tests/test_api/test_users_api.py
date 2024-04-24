@@ -7,6 +7,7 @@ from app.utils.nickname_gen import generate_nickname
 from app.utils.security import hash_password
 from app.services.jwt_service import decode_token  # Import your FastAPI app
 from fastapi.testclient import TestClient
+from urllib.parse import urlencode
 
 client = TestClient(app)
 # Example of a test function using the async_client fixture
@@ -53,7 +54,6 @@ async def test_update_user_email_access_allowed(async_client, admin_user, admin_
     assert response.status_code == 200
     assert response.json()["email"] == updated_data["email"]
 
-
 @pytest.mark.asyncio
 async def test_delete_user(async_client, admin_user, admin_token):
     headers = {"Authorization": f"Bearer {admin_token}"}
@@ -82,10 +82,6 @@ async def test_create_user_invalid_email(async_client):
     }
     response = await async_client.post("/register/", json=user_data)
     assert response.status_code == 422
-
-import pytest
-from app.services.jwt_service import decode_token
-from urllib.parse import urlencode
 
 @pytest.mark.asyncio
 async def test_login_success(async_client, verified_user):
@@ -177,9 +173,6 @@ async def test_list_users_unauthorized(async_client, user_token):
     )
     assert response.status_code == 403  # Forbidden, as expected for regular user
 
-
-
-#4/24:
 @pytest.mark.asyncio
 async def test_retrieve_user_by_id(async_client, admin_user, admin_token):
     # Make a request to retrieve the user by their ID
@@ -216,7 +209,6 @@ async def test_delete_user(async_client, admin_user, admin_token):
     fetch_response = await async_client.get(f"/users/{admin_user.id}", headers={"Authorization": f"Bearer {admin_token}"})
     assert fetch_response.status_code == 404
 
-#TESTING HERE:
 @pytest.mark.asyncio
 async def test_get_user(async_client, admin_user, admin_token):
     response = await async_client.get(f"/users/{admin_user.id}", headers={"Authorization": f"Bearer {admin_token}"})

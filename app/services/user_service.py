@@ -3,21 +3,18 @@ from datetime import datetime, timezone
 import secrets
 from typing import Optional, Dict, List
 from pydantic import ValidationError
-from sqlalchemy import func, null, update, select, or_
+from sqlalchemy import func, null, update, select, or_, and_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies import get_email_service, get_settings
 from app.models.user_model import User
-from app.schemas.user_schemas import UserCreate, UserUpdate
+from app.schemas.user_schemas import UserCreate, UserUpdate, UserResponse
 from app.utils.nickname_gen import generate_nickname
 from app.utils.security import generate_verification_token, hash_password, verify_password
 from uuid import UUID
 from app.services.email_service import EmailService
 from app.models.user_model import UserRole
 import logging
-from sqlalchemy import and_
-from uuid import UUID
-from app.schemas.user_schemas import UserResponse
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -124,7 +121,6 @@ class UserService:
     async def register_user(cls, session: AsyncSession, user_data: Dict[str, str], get_email_service) -> Optional[User]:
         return await cls.create(session, user_data, get_email_service)
     
-
     @classmethod
     async def login_user(cls, session: AsyncSession, email: str, password: str) -> Optional[User]:
         user = await cls.get_by_email(session, email)
@@ -151,7 +147,6 @@ class UserService:
     async def is_account_locked(cls, session: AsyncSession, email: str) -> bool:
         user = await cls.get_by_email(session, email)
         return user.is_locked if user else False
-
 
     @classmethod
     async def reset_password(cls, session: AsyncSession, user_id: UUID, new_password: str) -> bool:
@@ -203,8 +198,6 @@ class UserService:
             return True
         return False
 
-
-#FEATURES:
     @classmethod
     async def search_users(cls, session: AsyncSession, username: Optional[str] = None, email: Optional[str] = None, role: Optional[str] = None, account_status: Optional[str] = None, registration_date_from: Optional[datetime] = None, registration_date_to: Optional[datetime] = None, skip: int = 0, limit: int = 10) -> List[User]:
         query = select(User)

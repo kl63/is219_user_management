@@ -197,7 +197,6 @@ async def list_users(
         links=pagination_links  # Ensure you have appropriate logic to create these links
     )
 
-
 @router.post("/register/", response_model=UserResponse, tags=["Login and Registration"])
 async def register(user_data: UserCreate, session: AsyncSession = Depends(get_db), email_service: EmailService = Depends(get_email_service)):
     user = await UserService.register_user(session, user_data.model_dump(), email_service)
@@ -239,7 +238,6 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), session: Async
         return {"access_token": access_token, "token_type": "bearer"}
     raise HTTPException(status_code=401, detail="Incorrect email or password.")
 
-
 @router.get("/verify-email/{user_id}/{token}", status_code=status.HTTP_200_OK, name="verify_email", tags=["Login and Registration"])
 async def verify_email(user_id: UUID, token: str, db: AsyncSession = Depends(get_db), email_service: EmailService = Depends(get_email_service)):
     """
@@ -252,7 +250,6 @@ async def verify_email(user_id: UUID, token: str, db: AsyncSession = Depends(get
         return {"message": "Email verified successfully"}
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification token")
 
-#FEATURES:
 @router.get("/users/search/", response_model=UserListResponse, tags=["User Management Requires (Admin or Manager Roles)"])
 async def search_users(
     request: Request,
@@ -269,7 +266,6 @@ async def search_users(
 ):
     total_users = await UserService.count(db)
 
-    # Filter users based on query parameters
     users = await UserService.search_users(db, username=username, email=email, role=role, account_status=account_status, registration_date_from=registration_date_from, registration_date_to=registration_date_to, skip=skip, limit=limit)
 
     if not users:
@@ -281,7 +277,6 @@ async def search_users(
     
     pagination_links = generate_pagination_links(request, skip, limit, total_users)
     
-    # Construct the final response with pagination details
     return UserListResponse(
         items=user_responses,
         total=total_users,
