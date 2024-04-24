@@ -34,8 +34,10 @@ from app.utils.link_generation import create_user_links, generate_pagination_lin
 from app.dependencies import get_settings
 from app.services.email_service import EmailService
 import pytest
-
 from typing import Optional
+from fastapi import Query
+from datetime import datetime
+from app.schemas.user_schemas import UserListResponse
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
@@ -112,7 +114,6 @@ async def update_user(user_id: UUID, user_update: UserUpdate, request: Request, 
         links=create_user_links(updated_user.id, request)
     )
 
-
 @router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT, name="delete_user", tags=["User Management Requires (Admin or Manager Roles)"])
 async def delete_user(user_id: UUID, db: AsyncSession = Depends(get_db), token: str = Depends(oauth2_scheme), current_user: dict = Depends(require_role(["ADMIN", "MANAGER"]))):
     """
@@ -124,8 +125,6 @@ async def delete_user(user_id: UUID, db: AsyncSession = Depends(get_db), token: 
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
 
 @router.post("/users/", response_model=UserResponse, status_code=status.HTTP_201_CREATED, tags=["User Management Requires (Admin or Manager Roles)"], name="create_user")
 async def create_user(user: UserCreate, request: Request, db: AsyncSession = Depends(get_db), email_service: EmailService = Depends(get_email_service), token: str = Depends(oauth2_scheme), current_user: dict = Depends(require_role(["ADMIN", "MANAGER"]))):
@@ -153,7 +152,6 @@ async def create_user(user: UserCreate, request: Request, db: AsyncSession = Dep
     if not created_user:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create user")
     
-    
     return UserResponse.model_construct(
         id=created_user.id,
         bio=created_user.bio,
@@ -172,7 +170,6 @@ async def create_user(user: UserCreate, request: Request, db: AsyncSession = Dep
         github_profile_url=created_user.github_profile_url
 
     )
-
 
 @router.get("/users/", response_model=UserListResponse, tags=["User Management Requires (Admin or Manager Roles)"])
 async def list_users(
@@ -262,6 +259,9 @@ async def search_users(
     username: Optional[str] = Query(None, description="Username to search for"),
     email: Optional[str] = Query(None, description="Email to search for"),
     role: Optional[str] = Query(None, description="Role to search for"),
+    account_status: Optional[str] = Query(None, description="Account status to filter (active or locked)"),
+    registration_date_from: Optional[datetime] = Query(None, description="Start of registration date range"),
+    registration_date_to: Optional[datetime] = Query(None, description="End of registration date range"),
     skip: int = Query(0, description="Number of records to skip"),
     limit: int = Query(10, description="Maximum number of records to return"),
     db: AsyncSession = Depends(get_db),
@@ -270,7 +270,7 @@ async def search_users(
     total_users = await UserService.count(db)
 
     # Filter users based on query parameters
-    users = await UserService.search_users(db, username=username, email=email, role=role, skip=skip, limit=limit)
+    users = await UserService.search_users(db, username=username, email=email, role=role, account_status=account_status, registration_date_from=registration_date_from, registration_date_to=registration_date_to, skip=skip, limit=limit)
 
     if not users:
         raise HTTPException(status_code=404, detail="No users found with the provided criteria.")
@@ -289,24 +289,3 @@ async def search_users(
         size=len(user_responses),
         links=pagination_links
     )
-
-#TESTING HERE:
-@pytest.mark.asyncio
-async def test_verify_email_with_valid_token(async_client, new_user):
-    # Generate a valid verification token for the new user (You may need to mock this token generation)
-    valid_token = generate_valid_verification_token(new_user.id)
-    # Call the verify email endpoint with the user ID and valid token
-    response = await async_client.get(f"/verify-email/{new_user.id}/{valid_token}")
-    assert response.status_code == 200
-    assert response.json()["message"] == "Email verified successfully"
-    # Add more assertions to verify user's email is marked as verified in the database
-
-@pytest.mark.asyncio
-async def test_verify_email_with_invalid_token(async_client, new_user):
-    # Generate an invalid or expired verification token for the new user
-    invalid_token = generate_invalid_or_expired_token(new_user.id)
-    # Call the verify email endpoint with the user ID and invalid or expired token
-    response = await async_client.get(f"/verify-email/{new_user.id}/{invalid_token}")
-    assert response.status_code == 400
-    assert response.json()["detail"] == "Invalid or expired verification token"
-    # Add more assertions to verify user's email is not marked as verified in the database

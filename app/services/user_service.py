@@ -15,6 +15,9 @@ from uuid import UUID
 from app.services.email_service import EmailService
 from app.models.user_model import UserRole
 import logging
+from sqlalchemy import and_
+from uuid import UUID
+from app.schemas.user_schemas import UserResponse
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -203,7 +206,7 @@ class UserService:
 
 #FEATURES:
     @classmethod
-    async def search_users(cls, session: AsyncSession, username: Optional[str] = None, email: Optional[str] = None, role: Optional[str] = None, skip: int = 0, limit: int = 10) -> List[User]:
+    async def search_users(cls, session: AsyncSession, username: Optional[str] = None, email: Optional[str] = None, role: Optional[str] = None, account_status: Optional[str] = None, registration_date_from: Optional[datetime] = None, registration_date_to: Optional[datetime] = None, skip: int = 0, limit: int = 10) -> List[User]:
         query = select(User)
         
         if username:
@@ -212,8 +215,32 @@ class UserService:
             query = query.filter(func.lower(User.email) == func.lower(email))
         if role:
             query = query.filter(User.role == role)
-        
+        if account_status:
+            if account_status.lower() == 'locked':
+                query = query.filter(User.is_locked == True)
+            elif account_status.lower() == 'active':
+                query = query.filter(User.is_locked == False)
+        if registration_date_from:
+            query = query.filter(User.created_at >= registration_date_from)
+        if registration_date_to:
+            query = query.filter(User.created_at <= registration_date_to)
+
         query = query.offset(skip).limit(limit)
         
         result = await cls._execute_query(session, query)
-        return result.scalars().all() if result else []
+        users = result.scalars().all() if result else []
+        
+        # Prepare user responses with registration date and account status
+        user_responses = [
+            UserResponse(
+                id=user.id,
+                email=user.email,
+                nickname=user.nickname,
+                is_professional=user.is_professional,
+                role=user.role,
+                registration_date=user.created_at,
+                account_status="Active" if not user.is_locked else "Locked"
+            ) for user in users
+        ]
+        
+        return user_responses

@@ -4,6 +4,7 @@ from pydantic import ValidationError
 from datetime import datetime
 from app.schemas.user_schemas import UserBase, UserCreate, UserUpdate, UserResponse, UserListResponse, LoginRequest
 
+
 # Fixtures for common test data
 @pytest.fixture
 def user_base_data():
@@ -108,3 +109,66 @@ def test_user_base_url_invalid(url, user_base_data):
     user_base_data["profile_picture_url"] = url
     with pytest.raises(ValidationError):
         UserBase(**user_base_data)
+
+
+
+#4/24
+@pytest.fixture
+def valid_user_data():
+    return {
+        "email": "john.doe@example.com",
+        "nickname": "john_doe123",
+        "password": "Secure*1234",
+        "role": "authenticated"
+    }
+
+@pytest.fixture
+def invalid_user_data():
+    return {
+        "email": "invalid_email",
+        "nickname": "short",
+        "password": "weak",
+        "role": "invalid_role"
+    }
+
+# def test_create_user_valid(valid_user_data):
+#     user = UserCreate(**valid_user_data)
+#     assert user.email == valid_user_data['email']
+#     assert user.nickname == valid_user_data['nickname']
+#     assert user.role == valid_user_data['role']
+
+def test_create_user_invalid(invalid_user_data):
+    with pytest.raises(ValidationError):
+        UserCreate(**invalid_user_data)
+
+def test_update_user_at_least_one_field():
+    with pytest.raises(ValueError):
+        UserUpdate()
+
+
+def test_login_request_valid():
+    login_request = LoginRequest(email="john.doe@example.com", password="Secure*1234")
+    assert login_request.email == "john.doe@example.com"
+    assert login_request.password == "Secure*1234"
+
+
+def test_user_list_response_example_data_structure():
+    example_data = {
+        "items": [],
+        "total": 100,
+        "page": 1,
+        "size": 10
+    }
+    user_list_response = UserListResponse(**example_data)
+    assert user_list_response.dict() == example_data
+    
+@pytest.fixture
+def valid_user_data():
+    return {
+        "email": "john.doe@example.com",
+        "nickname": "john_doe123",
+        "password": "Secure*1234",
+        "role": "authenticated"
+    }
+
+
