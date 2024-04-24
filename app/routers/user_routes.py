@@ -33,6 +33,8 @@ from app.services.jwt_service import create_access_token
 from app.utils.link_generation import create_user_links, generate_pagination_links
 from app.dependencies import get_settings
 from app.services.email_service import EmailService
+import pytest
+
 from typing import Optional
 
 router = APIRouter()
@@ -142,7 +144,8 @@ async def create_user(user: UserCreate, request: Request, db: AsyncSession = Dep
     Returns:
     - UserResponse: The newly created user's information along with navigation links.
     """
-    existing_user = await UserService.get_by_email(db, user.email)
+    #CHECKS EMALS HERE
+    existing_user = await UserService.get_by_email(db, user.email) 
     if existing_user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already exists")
     
@@ -163,7 +166,11 @@ async def create_user(user: UserCreate, request: Request, db: AsyncSession = Dep
         last_login_at=created_user.last_login_at,
         created_at=created_user.created_at,
         updated_at=created_user.updated_at,
-        links=create_user_links(created_user.id, request)
+        links=create_user_links(created_user.id, request),
+        is_professional=created_user.is_professional,
+        linkedin_profile_url=created_user.linkedin_profile_url,
+        github_profile_url=created_user.github_profile_url
+
     )
 
 
@@ -282,3 +289,24 @@ async def search_users(
         size=len(user_responses),
         links=pagination_links
     )
+
+#TESTING HERE:
+@pytest.mark.asyncio
+async def test_verify_email_with_valid_token(async_client, new_user):
+    # Generate a valid verification token for the new user (You may need to mock this token generation)
+    valid_token = generate_valid_verification_token(new_user.id)
+    # Call the verify email endpoint with the user ID and valid token
+    response = await async_client.get(f"/verify-email/{new_user.id}/{valid_token}")
+    assert response.status_code == 200
+    assert response.json()["message"] == "Email verified successfully"
+    # Add more assertions to verify user's email is marked as verified in the database
+
+@pytest.mark.asyncio
+async def test_verify_email_with_invalid_token(async_client, new_user):
+    # Generate an invalid or expired verification token for the new user
+    invalid_token = generate_invalid_or_expired_token(new_user.id)
+    # Call the verify email endpoint with the user ID and invalid or expired token
+    response = await async_client.get(f"/verify-email/{new_user.id}/{invalid_token}")
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Invalid or expired verification token"
+    # Add more assertions to verify user's email is not marked as verified in the database
