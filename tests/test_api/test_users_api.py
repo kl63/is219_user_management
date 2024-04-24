@@ -7,6 +7,7 @@ from app.utils.nickname_gen import generate_nickname
 from app.utils.security import hash_password
 from app.services.jwt_service import decode_token  # Import your FastAPI app
 
+
 # Example of a test function using the async_client fixture
 @pytest.mark.asyncio
 async def test_create_user_access_denied(async_client, user_token, email_service):
@@ -190,3 +191,60 @@ async def test_list_users_unauthorized(async_client, user_token):
         headers={"Authorization": f"Bearer {user_token}"}
     )
     assert response.status_code == 403  # Forbidden, as expected for regular user
+
+
+
+#4/24:
+@pytest.mark.asyncio
+async def test_retrieve_user_by_id(async_client, admin_user, admin_token):
+    # Make a request to retrieve the user by their ID
+    response = await async_client.get(f"/users/{admin_user.id}", headers={"Authorization": f"Bearer {admin_token}"})
+
+    # Check if the response status code is 200 OK
+    assert response.status_code == 200
+
+    # Parse the response JSON
+    user_data = response.json()
+
+    # Check if the retrieved user ID matches the expected user ID
+    assert user_data["id"] == str(admin_user.id)
+
+@pytest.mark.asyncio
+async def test_retrieve_non_existent_user(async_client, admin_token):
+    non_existent_user_id = "00000000-0000-0000-0000-000000000000"  # Invalid UUID format
+    response = await async_client.get(f"/users/{non_existent_user_id}", headers={"Authorization": f"Bearer {admin_token}"})
+    assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_update_user_info(async_client, admin_user, admin_token):
+    updated_data = {"email": "updated_email@example.com"}  # Update email address
+    response = await async_client.put(f"/users/{admin_user.id}", json=updated_data, headers={"Authorization": f"Bearer {admin_token}"})
+    assert response.status_code == 200
+    assert response.json()["email"] == updated_data["email"]
+
+@pytest.mark.asyncio
+async def test_delete_user(async_client, admin_user, admin_token):
+    response = await async_client.delete(f"/users/{admin_user.id}", headers={"Authorization": f"Bearer {admin_token}"})
+    assert response.status_code == 204
+
+    # Verify the user is deleted
+    fetch_response = await async_client.get(f"/users/{admin_user.id}", headers={"Authorization": f"Bearer {admin_token}"})
+    assert fetch_response.status_code == 404
+
+#TESTING HERE:
+@pytest.mark.asyncio
+async def test_get_user(async_client, admin_user, admin_token):
+    response = await async_client.get(f"/users/{admin_user.id}", headers={"Authorization": f"Bearer {admin_token}"})
+    assert response.status_code == 200
+    assert response.json()["id"] == str(admin_user.id)
+    assert response.json()["email"] == admin_user.email
+    # Add more assertions to verify other fields
+
+@pytest.mark.asyncio
+async def test_list_users(async_client, admin_token):
+    response = await async_client.get("/users/", headers={"Authorization": f"Bearer {admin_token}"})
+    assert response.status_code == 200
+    assert "items" in response.json()
+    # Add more assertions to verify pagination and other details
+
+
