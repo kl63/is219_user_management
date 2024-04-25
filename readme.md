@@ -2,7 +2,7 @@
 
 ## Github Actions:
 [![CI/CD Pipline](https://github.com/kl63/is219_user_management/actions/workflows/production.yml/badge.svg)](https://github.com/kl63/is219_user_management/actions/workflows/production.yml)
-## Word Docuement Reflection:
+## Word Document Reflection:
 [[Reflection File](https://docs.google.com/document/d/1dVlunopS29TUZuKOzVx5NS1d_G4DN35N8_X9D9EnQlI/edit?usp=sharing)]
 ## Dockerhub:
 ![Dockerhub Repo Link](/docker.png)
